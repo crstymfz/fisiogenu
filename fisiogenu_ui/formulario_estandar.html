@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluación Estándar – FisioGenu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fisiogenu.css') }}">
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Navegación principal">
+      <div class="sidebar-brand">
+        <img class="brand-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="FisioGenu">
+        <div>
+          <div class="brand-text">FisioGenu</div>
+          <span class="brand-sub">Rehabilitación de Rodilla</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menú</div>
+        <a href="{{ url_for('index') }}" class="nav-item">
+          <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+        <a href="{{ url_for('formulario_estandar') }}" class="nav-item active">
+          <i class="bi bi-clipboard-check"></i> Evaluación Estándar
+        </a>
+        <a href="{{ url_for('formulario_pln') }}" class="nav-item">
+          <i class="bi bi-chat-dots"></i> Evaluación PLN
+        </a>
+        <a href="{{ url_for('historial') }}" class="nav-item">
+          <i class="bi bi-clock-history"></i> Historial Clínico
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        FisioGenu &mdash; Proyecto Académico
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button class="btn btn-ghost d-lg-none me-2" onclick="toggleSidebar()" aria-label="Abrir menú">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <div>
+            <h1 class="page-title">Evaluación Estándar</h1>
+            <nav aria-label="Breadcrumb">
+              <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Evaluación Estándar</li>
+              </ol>
+            </nav>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <span class="badge bg-info bg-opacity-10 text-info px-3 py-2">
+            <i class="bi bi-clipboard-data me-1"></i> 7 variables clínicas
+          </span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <form method="POST" action="{{ url_for('evaluar') }}" id="formEstandar" novalidate>
+          <!-- DATOS PACIENTE -->
+          <div class="card-clinica mb-4 animate-fade-in">
+            <div class="card-header-clinico">
+              <span><i class="bi bi-person-badge me-2 text-secondary"></i>Datos del Paciente</span>
+            </div>
+            <div class="card-body-clinico">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label" for="nombre">Nombre completo</label>
+                  <input type="text" class="form-control form-control-lg" id="nombre" name="nombre" value="{{ datos.nombre if datos else '' }}" placeholder="Ingrese el nombre del paciente" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="edad">Edad</label>
+                  <input type="number" class="form-control form-control-lg" id="edad" name="edad" value="{{ datos.edad if datos else '' }}" placeholder="Años" min="0" max="120">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="sexo">Sexo</label>
+                  <select class="form-select form-select-lg" id="sexo" name="sexo">
+                    <option value="">Seleccione...</option>
+                    <option value="Masculino" {% if datos and datos.sexo == 'Masculino' %}selected{% endif %}>Masculino</option>
+                    <option value="Femenino" {% if datos and datos.sexo == 'Femenino' %}selected{% endif %}>Femenino</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROGRESS STEPS -->
+          <div class="progress-step animate-fade-in stagger-1" id="progressSteps">
+            <div class="step completed" data-step="1">
+              <span class="step-indicator"><i class="bi bi-check"></i></span>
+              <span class="step-label">Paciente</span>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step active" data-step="2">
+              <span class="step-indicator">1</span>
+              <span class="step-label">Signos inflamatorios</span>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step" data-step="3">
+              <span class="step-indicator">2</span>
+              <span class="step-label">Función motora</span>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step" data-step="4">
+              <span class="step-indicator">3</span>
+              <span class="step-label">Funcionalidad</span>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step" data-step="5">
+              <span class="step-indicator"><i class="bi bi-check2-all"></i></span>
+              <span class="step-label">Completar</span>
+            </div>
+          </div>
+
+          <!-- SECCION 1: SIGNOS INFLAMATORIOS -->
+          <div class="card-clinica mb-4 animate-fade-in stagger-2" data-section="1">
+            <div class="card-header-clinico">
+              <span><i class="bi bi-thermometer me-2" style="color:var(--danger)"></i>Signos inflamatorios</span>
+              <span class="text-muted small">Evalúe el nivel de dolor y edema</span>
+            </div>
+            <div class="card-body-clinico">
+              <div class="row g-4">
+                <!-- DOLOR -->
+                <div class="col-md-6">
+                  <label class="form-label fs-6 fw-semibold">Dolor</label>
+                  <p class="form-text mb-2">Nivel de dolor reportado por el paciente</p>
+                  <div class="segment-group" role="radiogroup" aria-label="Nivel de dolor" data-var="dolor">
+                    <button type="button" class="segment-btn" data-value="leve" onclick="selectSegment(this)">Leve</button>
+                    <button type="button" class="segment-btn" data-value="moderado" onclick="selectSegment(this)">Moderado</button>
+                    <button type="button" class="segment-btn" data-value="severo" onclick="selectSegment(this)">Severo</button>
+                  </div>
+                  <input type="hidden" name="dolor" id="hdolor" value="">
+                </div>
+                <!-- EDEMA -->
+                <div class="col-md-6">
+                  <label class="form-label fs-6 fw-semibold">Edema</label>
+                  <p class="form-text mb-2">Presencia y severidad de hinchazón</p>
+                  <div class="segment-group" role="radiogroup" aria-label="Nivel de edema" data-var="edema">
+                    <button type="button" class="segment-btn" data-value="ausente" onclick="selectSegment(this)">Ausente</button>
+                    <button type="button" class="segment-btn" data-value="leve" onclick="selectSegment(this)">Leve</button>
+                    <button type="button" class="segment-btn" data-value="moderado" onclick="selectSegment(this)">Moderado</button>
+                    <button type="button" class="segment-btn" data-value="severo" onclick="selectSegment(this)">Severo</button>
+                  </div>
+                  <input type="hidden" name="edema" id="hedema" value="">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCION 2: FUNCION MOTORA -->
+          <div class="card-clinica mb-4 animate-fade-in stagger-3" data-section="2">
+            <div class="card-header-clinico">
+              <span><i class="bi bi-activity me-2" style="color:var(--secondary)"></i>Función motora</span>
+              <span class="text-muted small">Evalúe rango articular y fuerza muscular</span>
+            </div>
+            <div class="card-body-clinico">
+              <div class="row g-4">
+                <!-- RANGO ARTICULAR -->
+                <div class="col-md-6">
+                  <label class="form-label fs-6 fw-semibold">Rango Articular</label>
+                  <p class="form-text mb-2">Capacidad de movimiento de la rodilla</p>
+                  <div class="segment-group" role="radiogroup" aria-label="Rango articular" data-var="rango_articular">
+                    <button type="button" class="segment-btn" data-value="completo" onclick="selectSegment(this)">Completo</button>
+                    <button type="button" class="segment-btn" data-value="parcial" onclick="selectSegment(this)">Parcial</button>
+                    <button type="button" class="segment-btn" data-value="limitado" onclick="selectSegment(this)">Limitado</button>
+                  </div>
+                  <input type="hidden" name="rango_articular" id="hrango_articular" value="">
+                </div>
+                <!-- FUERZA MUSCULAR -->
+                <div class="col-md-6">
+                  <label class="form-label fs-6 fw-semibold">Fuerza Muscular</label>
+                  <p class="form-text mb-2">Evaluación de la fuerza del cuádriceps e isquiotibiales</p>
+                  <div class="segment-group" role="radiogroup" aria-label="Fuerza muscular" data-var="fuerza_muscular">
+                    <button type="button" class="segment-btn" data-value="adecuada" onclick="selectSegment(this)">Adecuada</button>
+                    <button type="button" class="segment-btn" data-value="disminuida" onclick="selectSegment(this)">Disminuida</button>
+                    <button type="button" class="segment-btn" data-value="debil" onclick="selectSegment(this)">Débil</button>
+                  </div>
+                  <input type="hidden" name="fuerza_muscular" id="hfuerza_muscular" value="">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCION 3: FUNCIONALIDAD -->
+          <div class="card-clinica mb-4 animate-fade-in stagger-4" data-section="3">
+            <div class="card-header-clinico">
+              <span><i class="bi bi-person-walking me-2" style="color:var(--info)"></i>Funcionalidad y estabilidad</span>
+              <span class="text-muted small">Capacidad funcional, carga y estabilidad</span>
+            </div>
+            <div class="card-body-clinico">
+              <div class="row g-4">
+                <!-- CAPACIDAD FUNCIONAL -->
+                <div class="col-md-4">
+                  <label class="form-label fs-6 fw-semibold">Capacidad Funcional</label>
+                  <p class="form-text mb-2">Nivel de independencia en actividades</p>
+                  <div class="segment-group flex-column" role="radiogroup" aria-label="Capacidad funcional" data-var="capacidad_funcional">
+                    <button type="button" class="segment-btn" data-value="independiente" onclick="selectSegment(this)">Independiente</button>
+                    <button type="button" class="segment-btn" data-value="asistida" onclick="selectSegment(this)">Asistida</button>
+                    <button type="button" class="segment-btn" data-value="dependiente" onclick="selectSegment(this)">Dependiente</button>
+                  </div>
+                  <input type="hidden" name="capacidad_funcional" id="hcapacidad_funcional" value="">
+                </div>
+                <!-- TOLERANCIA A CARGA -->
+                <div class="col-md-4">
+                  <label class="form-label fs-6 fw-semibold">Tolerancia a Carga</label>
+                  <p class="form-text mb-2">Capacidad de soportar peso</p>
+                  <div class="segment-group flex-column" role="radiogroup" aria-label="Tolerancia a carga" data-var="tolerancia_carga">
+                    <button type="button" class="segment-btn" data-value="funcional" onclick="selectSegment(this)">Funcional</button>
+                    <button type="button" class="segment-btn" data-value="parcial" onclick="selectSegment(this)">Parcial</button>
+                    <button type="button" class="segment-btn" data-value="no_tolera" onclick="selectSegment(this)">No tolera</button>
+                  </div>
+                  <input type="hidden" name="tolerancia_carga" id="htolerancia_carga" value="">
+                </div>
+                <!-- ESTABILIDAD DE RODILLA -->
+                <div class="col-md-4">
+                  <label class="form-label fs-6 fw-semibold">Estabilidad de Rodilla</label>
+                  <p class="form-text mb-2">Sensación de estabilidad articular</p>
+                  <div class="segment-group flex-column" role="radiogroup" aria-label="Estabilidad de rodilla" data-var="estabilidad_rodilla">
+                    <button type="button" class="segment-btn" data-value="estable" onclick="selectSegment(this)">Estable</button>
+                    <button type="button" class="segment-btn" data-value="inestable" onclick="selectSegment(this)">Inestable</button>
+                    <button type="button" class="segment-btn" data-value="muy_inestable" onclick="selectSegment(this)">Muy inestable</button>
+                  </div>
+                  <input type="hidden" name="estabilidad_rodilla" id="hestabilidad_rodilla" value="">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIONS -->
+          <div class="d-flex justify-content-between align-items-center animate-fade-in stagger-5">
+            <a href="{{ url_for('index') }}" class="btn btn-ghost"><i class="bi bi-arrow-left me-1"></i> Cancelar</a>
+            <button type="submit" class="btn btn-primary btn-lg px-5" id="btnEvaluar" disabled>
+              <i class="bi bi-clipboard2-check me-2"></i>Evaluar paciente
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("sidebarOverlay").classList.toggle("show");
+    }
+    document.getElementById("sidebarOverlay").addEventListener("click", function() {
+      this.classList.remove("show");
+      document.getElementById("sidebar").classList.remove("open");
+    });
+
+    function selectSegment(btn) {
+      var group = btn.closest(".segment-group");
+      var varName = group.getAttribute("data-var");
+      var hidden = document.getElementById("h" + varName);
+
+      group.querySelectorAll(".segment-btn").forEach(function(b) {
+        b.classList.remove("active");
+      });
+      btn.classList.add("active");
+      hidden.value = btn.getAttribute("data-value");
+      updateProgress();
+    }
+
+    function updateProgress() {
+      var vars = ["dolor", "edema", "rango_articular", "fuerza_muscular", "capacidad_funcional", "tolerancia_carga", "estabilidad_rodilla"];
+      var filled = 0;
+      var nombreEl = document.getElementById("nombre");
+      var nombreOk = nombreEl && nombreEl.value && nombreEl.value.trim() !== "";
+
+      vars.forEach(function(v) {
+        var h = document.getElementById("h" + v);
+        if (h && h.value) filled++;
+      });
+
+      var steps = document.querySelectorAll(".progress-step .step");
+      if (steps.length >= 5) {
+        steps[0].classList.toggle("completed", nombreOk);
+        if (nombreOk) { steps[0].querySelector(".step-indicator").innerHTML = '<i class="bi bi-check"></i>'; }
+        var s1 = (document.getElementById("hdolor").value && document.getElementById("hedema").value);
+        steps[1].classList.toggle("completed", !!s1);
+        if (s1) { steps[1].querySelector(".step-indicator").innerHTML = '<i class="bi bi-check"></i>'; }
+        var s2 = (document.getElementById("hrango_articular").value && document.getElementById("hfuerza_muscular").value);
+        steps[2].classList.toggle("completed", !!s2);
+        if (s2) { steps[2].querySelector(".step-indicator").innerHTML = '<i class="bi bi-check"></i>'; }
+        var s3 = (document.getElementById("hcapacidad_funcional").value && document.getElementById("htolerancia_carga").value && document.getElementById("hestabilidad_rodilla").value);
+        steps[3].classList.toggle("completed", !!s3);
+        if (s3) { steps[3].querySelector(".step-indicator").innerHTML = '<i class="bi bi-check"></i>'; }
+        steps[4].classList.toggle("completed", filled === 7 && nombreOk);
+        if (filled === 7 && nombreOk) { steps[4].querySelector(".step-indicator").innerHTML = '<i class="bi bi-check"></i>'; }
+      }
+
+      var btn = document.getElementById("btnEvaluar");
+      if (btn) btn.disabled = filled !== 7 || !nombreOk;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      updateProgress();
+      var es = document.querySelectorAll("input[type=hidden][name]");
+      es.forEach(function(h) {
+        if (h.value) {
+          var g = document.querySelector('.segment-group[data-var="' + h.name + '"]');
+          if (g) {
+            g.querySelectorAll(".segment-btn").forEach(function(b) {
+              if (b.getAttribute("data-value") === h.value) b.classList.add("active");
+            });
+          }
+        }
+      });
+    });
+    document.getElementById("nombre").addEventListener("input", updateProgress);
+  </script>
+</body>
+</html>

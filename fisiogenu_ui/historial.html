@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial – FisioGenu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fisiogenu.css') }}">
+</head>
+<body>
+  <div class="app-layout">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Navegación principal">
+      <div class="sidebar-brand">
+        <img class="brand-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="FisioGenu">
+        <div>
+          <div class="brand-text">FisioGenu</div>
+          <span class="brand-sub">Rehabilitación de Rodilla</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menú</div>
+        <a href="{{ url_for('index') }}" class="nav-item">
+          <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+        <a href="{{ url_for('formulario_estandar') }}" class="nav-item">
+          <i class="bi bi-clipboard-check"></i> Evaluación Estándar
+        </a>
+        <a href="{{ url_for('formulario_pln') }}" class="nav-item">
+          <i class="bi bi-chat-dots"></i> Evaluación PLN
+        </a>
+        <a href="{{ url_for('historial') }}" class="nav-item active">
+          <i class="bi bi-clock-history"></i> Historial Clínico
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        FisioGenu &mdash; Proyecto Académico
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button class="btn btn-ghost d-lg-none me-2" onclick="toggleSidebar()" aria-label="Abrir menú">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <div>
+            <h1 class="page-title">Historial Clínico</h1>
+            <nav aria-label="Breadcrumb">
+              <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Inicio</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Historial</li>
+              </ol>
+            </nav>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <a href="{{ url_for('formulario_estandar') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Nueva evaluación
+          </a>
+        </div>
+      </header>
+
+      <div class="content-area">
+        {% if evaluaciones %}
+        <!-- FILTER TABS -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+          <div class="filter-tabs" role="tablist">
+            <button class="filter-tab active" data-filter="all" onclick="filtrarTablas(this)">Todas</button>
+            <button class="filter-tab" data-filter="aguda" onclick="filtrarTablas(this)">Aguda</button>
+            <button class="filter-tab" data-filter="subaguda" onclick="filtrarTablas(this)">Subaguda</button>
+            <button class="filter-tab" data-filter="funcional" onclick="filtrarTablas(this)">Funcional</button>
+            <button class="filter-tab" data-filter="alta" onclick="filtrarTablas(this)">Alta funcional</button>
+          </div>
+          <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Buscar paciente..." oninput="filtrarBusqueda()" style="padding-left:32px;width:200px;">
+          </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="card-clinica animate-fade-in">
+          <div class="table-responsive">
+            <table class="table-clinica">
+              <thead>
+                <tr>
+                  <th>Paciente</th>
+                  <th>Fecha</th>
+                  <th>Método</th>
+                  <th>Fase</th>
+                  <th style="width:120px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tablaBody">
+                {% for ev in evaluaciones %}
+                {% set fase = ev.fase_detectada|lower %}
+                {% set badge_cls = 'alta' if 'alta' in fase else ('funcional' if fase == 'funcional' else ('aguda' if fase == 'aguda' else 'subaguda')) %}
+                <tr class="fila-evaluacion" data-fase="{{ fase }}" data-nombre="{{ ev.nombre|lower }}">
+                  <td>
+                    <div class="fw-semibold">{{ ev.nombre }}</div>
+                    <small class="text-muted">
+                      {% if ev.edad %}{{ ev.edad }} años{% endif %}
+                      {% if ev.sexo %} &middot; {{ ev.sexo }}{% endif %}
+                    </small>
+                  </td>
+                  <td><span class="text-secondary">{{ ev.fecha }}</span></td>
+                  <td><span class="badge bg-light text-secondary">{{ ev.metodo_evaluacion }}</span></td>
+                  <td><span class="badge badge-{{ badge_cls }}">{{ ev.fase_detectada }}</span></td>
+                  <td>
+                    <div class="action-bar">
+                      <a href="{{ url_for('descargar_pdf', evaluacion_id=ev.id) }}" class="btn btn-ghost btn-sm" title="Descargar PDF">
+                        <i class="bi bi-filetype-pdf"></i>
+                      </a>
+                      <button type="button" class="btn btn-ghost btn-sm text-danger" title="Eliminar" onclick="confirmarEliminar({{ ev.id }}, '{{ ev.nombre|e }}')">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-clinica animate-fade-in">
+          <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h5>No hay evaluaciones registradas</h5>
+            <p>Realice una evaluación para comenzar a registrar el historial clínico de sus pacientes.</p>
+            <a href="{{ url_for('formulario_estandar') }}" class="btn btn-primary">
+              <i class="bi bi-plus-circle me-2"></i> Realizar evaluación
+            </a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+
+  <!-- DELETE MODAL -->
+  <div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Eliminar evaluación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <div class="display-5 text-danger mb-3"><i class="bi bi-trash3"></i></div>
+          <p class="fs-5 mb-1">¿Eliminar esta evaluación?</p>
+          <p class="text-muted mb-0" id="textoPacienteEliminar"></p>
+          <p class="text-muted small mt-2">Esta acción no se puede deshacer.</p>
+        </div>
+        <div class="modal-footer justify-content-center border-0 pb-4">
+          <button type="button" class="btn btn-secondary-clinico px-4" data-bs-dismiss="modal">Cancelar</button>
+          <form method="POST" id="formEliminar" style="display:inline;">
+            <button type="submit" class="btn btn-danger px-4">
+              <i class="bi bi-trash me-2"></i> Eliminar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("sidebarOverlay").classList.toggle("show");
+    }
+    document.getElementById("sidebarOverlay").addEventListener("click", function() {
+      this.classList.remove("show");
+      document.getElementById("sidebar").classList.remove("open");
+    });
+
+    function confirmarEliminar(id, nombre) {
+      document.getElementById("textoPacienteEliminar").textContent = nombre;
+      document.getElementById("formEliminar").action = "/eliminar/" + id;
+      var modal = new bootstrap.Modal(document.getElementById("modalEliminar"));
+      modal.show();
+    }
+
+    function filtrarTablas(btn) {
+      document.querySelectorAll(".filter-tab").forEach(function(t) { t.classList.remove("active"); });
+      btn.classList.add("active");
+      var filtro = btn.getAttribute("data-filter");
+      document.querySelectorAll(".fila-evaluacion").forEach(function(row) {
+        if (filtro === "all") { row.style.display = ""; }
+        else {
+          var fase = row.getAttribute("data-fase");
+          var match = false;
+          if (filtro === "alta") { match = fase.indexOf("alta") !== -1; }
+          else { match = fase.indexOf(filtro) !== -1; }
+          row.style.display = match ? "" : "none";
+        }
+      });
+    }
+
+    function filtrarBusqueda() {
+      var q = document.getElementById("searchInput").value.toLowerCase().trim();
+      document.querySelectorAll(".fila-evaluacion").forEach(function(row) {
+        var nombre = row.getAttribute("data-nombre");
+        row.style.display = q === "" || nombre.indexOf(q) !== -1 ? "" : "none";
+      });
+    }
+  </script>
+</body>
+</html>

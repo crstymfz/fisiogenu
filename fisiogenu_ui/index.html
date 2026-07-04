@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard – FisioGenu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fisiogenu.css') }}">
+  <style>
+    .card-clinica, .card { border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Saltar al contenido principal</a>
+
+  <div class="app-layout">
+    <!-- OVERLAY (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Navegación principal">
+      <div class="sidebar-brand">
+        <img class="brand-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="FisioGenu">
+        <div>
+          <div class="brand-text">FisioGenu</div>
+          <span class="brand-sub">Rehabilitación de Rodilla</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Menú</div>
+        <a href="{{ url_for('index') }}" class="nav-item active">
+          <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+        <a href="{{ url_for('formulario_estandar') }}" class="nav-item">
+          <i class="bi bi-clipboard-check"></i> Evaluación Estándar
+        </a>
+        <a href="{{ url_for('formulario_pln') }}" class="nav-item">
+          <i class="bi bi-chat-dots"></i> Evaluación PLN
+        </a>
+        <a href="{{ url_for('historial') }}" class="nav-item">
+          <i class="bi bi-clock-history"></i> Historial Clínico
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        FisioGenu &mdash; Proyecto Académico
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content" id="main">
+      <!-- TOP BAR -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button class="btn btn-ghost d-lg-none me-2" onclick="toggleSidebar()" aria-label="Abrir menú">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <div>
+            <h1 class="page-title">Dashboard</h1>
+            <nav aria-label="Breadcrumb">
+              <ol class="breadcrumb">
+                <li class="breadcrumb-item active" aria-current="page">Inicio</li>
+              </ol>
+            </nav>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2">
+            <i class="bi bi-shield-check me-1"></i> Sistema Experto
+          </span>
+        </div>
+      </header>
+
+      <!-- CONTENT -->
+      <div class="content-area">
+        {% set total = evaluaciones|length %}
+        {% set fases = evaluaciones|map(attribute='fase_detectada')|list %}
+        {% set aguda = fases|select('equalto', 'aguda')|list|length %}
+        {% set subaguda = fases|select('equalto', 'subaguda')|list|length %}
+        {% set funcional = fases|select('equalto', 'funcional')|list|length %}
+        {% set alta = fases|select('equalto', 'alta funcional')|list|length %}
+
+        <!-- HERO -->
+        <div class="hero-clinico animate-fade-in">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h1>Bienvenido a FisioGenu</h1>
+              <p>Sistema experto web para la evaluación y clasificación de pacientes en rehabilitación de rodilla. Utilice las herramientas disponibles para realizar evaluaciones clínicas estandarizadas o mediante análisis de lenguaje natural.</p>
+            </div>
+            <div class="col-md-4 text-md-end d-none d-md-block">
+              <i class="bi bi-activity" style="font-size: 4rem; opacity: 0.3;"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="row g-3 mb-4">
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="stat-card animate-fade-in stagger-1">
+              <div class="stat-icon primary"><i class="bi bi-people"></i></div>
+              <div class="stat-value">{{ total }}</div>
+              <div class="stat-label">Pacientes evaluados</div>
+              {% if total > 0 %}
+              <div class="stat-change up"><i class="bi bi-arrow-up"></i> Total registrado</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="stat-card animate-fade-in stagger-2">
+              <div class="stat-icon info"><i class="bi bi-clipboard-data"></i></div>
+              <div class="stat-value">{{ evaluaciones|length }}</div>
+              <div class="stat-label">Evaluaciones realizadas</div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="stat-card animate-fade-in stagger-3">
+              <div class="stat-icon warning"><i class="bi bi-bar-chart"></i></div>
+              <div class="stat-value">
+                {% if aguda > 0 %}Aguda: {{ aguda }}{% elif subaguda > 0 %}Subaguda: {{ subaguda }}{% elif funcional > 0 %}Funcional: {{ funcional }}{% elif alta > 0 %}Alta: {{ alta }}{% else %}--{% endif %}
+              </div>
+              <div class="stat-label">Fase predominante</div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="stat-card animate-fade-in stagger-4">
+              <div class="stat-icon success"><i class="bi bi-graph-up-arrow"></i></div>
+              <div class="stat-value">
+                {% if total > 0 %}
+                {{ (alta / total * 100)|int }}%
+                {% else %}--{% endif %}
+              </div>
+              <div class="stat-label">Pacientes en fase alta</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div class="row g-3">
+          <!-- QUICK ACTIONS -->
+          <div class="col-lg-4">
+            <h5 class="fw-semibold mb-3"><i class="bi bi-lightning me-2 text-secondary"></i>Acceso rápido</h5>
+            <div class="d-grid gap-3">
+              <a href="{{ url_for('formulario_estandar') }}" class="card-clinica p-4 text-decoration-none text-body animate-fade-in stagger-1" style="cursor: pointer;">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="stat-icon primary mb-0" style="width:44px;height:44px;font-size:1.2rem;">
+                    <i class="bi bi-clipboard-check"></i>
+                  </div>
+                  <div>
+                    <div class="fw-semibold">Evaluación Estándar</div>
+                    <small class="text-muted">Formulario estructurado con 7 variables clínicas</small>
+                  </div>
+                  <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                </div>
+              </a>
+              <a href="{{ url_for('formulario_pln') }}" class="card-clinica p-4 text-decoration-none text-body animate-fade-in stagger-2" style="cursor: pointer;">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="stat-icon info mb-0" style="width:44px;height:44px;font-size:1.2rem;">
+                    <i class="bi bi-chat-dots"></i>
+                  </div>
+                  <div>
+                    <div class="fw-semibold">Evaluación por PLN</div>
+                    <small class="text-muted">Análisis de texto libre con lenguaje natural</small>
+                  </div>
+                  <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                </div>
+              </a>
+              <a href="{{ url_for('historial') }}" class="card-clinica p-4 text-decoration-none text-body animate-fade-in stagger-3" style="cursor: pointer;">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="stat-icon warning mb-0" style="width:44px;height:44px;font-size:1.2rem;">
+                    <i class="bi bi-clock-history"></i>
+                  </div>
+                  <div>
+                    <div class="fw-semibold">Historial Clínico</div>
+                    <small class="text-muted">Todas las evaluaciones registradas</small>
+                  </div>
+                  <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- RECENT EVALUATIONS -->
+          <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-semibold mb-0"><i class="bi bi-clock me-2 text-secondary"></i>Actividad reciente</h5>
+              {% if evaluaciones %}
+              <a href="{{ url_for('historial') }}" class="btn btn-ghost btn-sm">Ver todo <i class="bi bi-arrow-right ms-1"></i></a>
+              {% endif %}
+            </div>
+            {% if evaluaciones %}
+            {% for ev in evaluaciones[:5] %}
+            {% set fase = ev.fase_detectada|lower %}
+            {% set badge_cls = 'alta' if 'alta' in fase else ('funcional' if fase == 'funcional' else ('aguda' if fase == 'aguda' else 'subaguda')) %}
+            {% set borde_cls = 'border-alta' if 'alta' in fase else ('border-funcional' if fase == 'funcional' else ('border-aguda' if fase == 'aguda' else 'border-subaguda')) %}
+            <div class="card-clinica p-3 mb-2 animate-fade-in stagger-{{ loop.index }}" style="border-left: 4px solid var(--{% if 'alta' in fase %}success{% elif fase == 'funcional' %}secondary{% elif fase == 'aguda' %}danger{% else %}warning{% endif %});">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-3">
+                  <div>
+                    <div class="fw-semibold">{{ ev.nombre }}</div>
+                    <small class="text-muted">
+                      {% if ev.edad %}{{ ev.edad }} años{% endif %}
+                      {% if ev.sexo %} &middot; {{ ev.sexo }}{% endif %}
+                      &middot; <i class="bi bi-calendar3"></i> {{ ev.fecha }}
+                    </small>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge badge-{{ badge_cls }}">{{ ev.fase_detectada }}</span>
+                  <small class="text-muted">{{ ev.metodo_evaluacion }}</small>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state card-clinica p-5">
+              <i class="bi bi-inbox"></i>
+              <h5>Aún no hay evaluaciones</h5>
+              <p>Realice su primera evaluación para comenzar a utilizar el sistema.</p>
+              <a href="{{ url_for('formulario_estandar') }}" class="btn btn-primary">Iniciar evaluación</a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+      document.getElementById("sidebarOverlay").classList.toggle("show");
+    }
+    document.getElementById("sidebarOverlay").addEventListener("click", function() {
+      this.classList.remove("show");
+      document.getElementById("sidebar").classList.remove("open");
+    });
+  </script>
+</body>
+</html>
