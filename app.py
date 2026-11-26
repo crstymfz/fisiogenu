@@ -115,8 +115,13 @@ def evaluar_pln():
         "sexo": request.form.get("sexo", "").strip(),
     }
 
-    hechos_pln = procesar_texto_llm(texto) or procesar_texto_pln(texto)
     hechos_form = crear_hechos(request.form)
+    faltan_hechos = any(not hechos_form.get(v) for v in ["dolor", "edema", "rango_articular", "fuerza_muscular", "capacidad_funcional", "tolerancia_carga", "estabilidad_rodilla"])
+
+    if faltan_hechos and texto.strip():
+        hechos_pln = procesar_texto_llm(texto) or procesar_texto_pln(texto) or {}
+    else:
+        hechos_pln = {}
 
     hechos = {}
     for variable in hechos_form:
@@ -138,7 +143,7 @@ def evaluar_pln():
     return render_template("resultado.html", evaluacion=resultado)
 
 
-@app.route("/eliminar/<int:evaluacion_id>", methods=["POST"])
+@app.route("/eliminar/<int:evaluacion_id>", methods=["GET", "POST"])
 def eliminar(evaluacion_id):
     database.eliminar_evaluacion(evaluacion_id)
     return redirect(url_for("historial"))
@@ -183,4 +188,6 @@ def procesar_texto_endpoint():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

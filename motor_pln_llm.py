@@ -1,21 +1,8 @@
-import os
-import re
-import json
-import requests
-
-API_URL = os.environ.get("IA_API_URL", "https://api.groq.com/openai/v1/chat/completions")
-
-_key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".ia_key")
-API_KEY = os.environ.get("IA_API_KEY", "")
-if not API_KEY and os.path.isfile(_key_file):
-    with open(_key_file, "r") as f:
-        API_KEY = f.read().strip()
-
-MODELO = os.environ.get("IA_MODELO", "llama-3.3-70b-versatile")
+import ia_client
 
 SISTEMA = (
     "Eres un extractor de variables clinicas para rehabilitacion de rodilla. "
-    "Del texto del paciente, extrae SOLO estas variables con sus valores exactos:\n"
+    "Del texto del paciente, extrae SOLO estas variables con sus valores exactos permitidos:\n"
     "- dolor: leve, moderado, severo\n"
     "- edema: ausente, leve, moderado, severo\n"
     "- rango_articular: completo, parcial, limitado\n"
@@ -25,73 +12,72 @@ SISTEMA = (
     "- estabilidad_rodilla: estable, inestable, muy_inestable\n\n"
     "Usa SIEMPRE los nombres exactos de variable escritos arriba.\n"
     "Devuelve SOLO JSON valido, sin comentarios, sin texto adicional, sin markdown:\n"
-    '{"dolor": {"valor": "...", "confianza": 0.95, "frase_detectada": "..."}, ...}'
+    '{"dolor": {"valor": "leve", "confianza": 0.95, "frase_detectada": "..."}, ...}'
 )
 
 ULTIMO_RESULTADO = {}
-
-
-def _extraer_json(texto):
-    texto = texto.strip()
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", texto, re.DOTALL)
-    if match:
-        texto = match.group(1)
-    texto = re.sub(r",\s*}", "}", texto)
-    texto = re.sub(r",\s*]", "]", texto)
-    inicio = texto.find("{")
-    fin = texto.rfind("}")
-    if inicio != -1 and fin != -1 and fin > inicio:
-        texto = texto[inicio:fin+1]
-    return json.loads(texto)
+ULTIMO_PROVEEDOR = None
 
 
 def procesar_texto(texto):
-    global ULTIMO_RESULTADO
-    if not API_KEY:
-        ULTIMO_RESULTADO = {}
-        return None
+    """
+    Extrae las variables clínicas del texto libre usando el cliente de IA híbrido (Gemini / Groq).
+    """
+    global ULTIMO_RESULTADO, ULTIMO_PROVEEDOR
 
     if not texto or not texto.strip():
         ULTIMO_RESULTADO = {}
+        ULTIMO_PROVEEDOR = None
         return None
 
-    try:
-        body = {
-            "model": MODELO,
-            "messages": [
-                {"role": "system", "content": SISTEMA},
-                {"role": "user", "content": texto},
-            ],
-            "temperature": 0.05,
-            "max_tokens": 1024,
-        }
+    datos, proveedor = ia_client.consultar_ia_json(
+        system_prompt=SISTEMA,
+        user_prompt=texto,
+        orden_preferido=("gemini", "groq")
+    )
 
-        resp = requests.post(
-            API_URL,
-            headers={
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=body,
-            timeout=30,
-        )
-        resp.raise_for_status()
-        raw = resp.json()["choices"][0]["message"]["content"]
-        datos = _extraer_json(raw)
-
-        for var in list(datos.keys()):
-            if not isinstance(datos[var], dict) or "valor" not in datos[var]:
-                datos.pop(var)
-                continue
-            datos[var]["confianza"] = min(1.0, max(0.0, datos[var].get("confianza", 0.5)))
-            datos[var]["frase_detectada"] = datos[var].get("frase_detectada", "")
-
-        ULTIMO_RESULTADO = datos
-        return datos
-
-    except Exception:
+    if not datos or not isinstance(datos, dict):
         ULTIMO_RESULTADO = {}
+        ULTIMO_PROVEEDOR = None
         return None
+
+    # Limpieza y validación de las variables detectadas
+    variables_validas = {
+        "dolor": ["leve", "moderado", "severo"],
+        "edema": ["ausente", "leve", "moderado", "severo"],
+        "rango_articular": ["completo", "parcial", "limitado"],
+        "fuerza_muscular": ["adecuada", "disminuida", "debil"],
+        "capacidad_funcional": ["independiente", "asistida", "dependiente"],
+        "tolerancia_carga": ["funcional", "parcial", "no_tolera"],
+        "estabilidad_rodilla": ["estable", "inestable", "muy_inestable"],
+    }
+
+    resultado_limpio = {}
+    for var in list(datos.keys()):
+        if var not in variables_validas:
+            continue
+        info = datos[var]
+        if isinstance(info, str):
+            info = {"valor": info, "confianza": 0.9, "frase_detectada": ""}
+        if not isinstance(info, dict) or "valor" not in info:
+            continue
+        
+        valor = str(info["valor"]).strip().lower().replace(" ", "_")
+        if valor in variables_validas[var]:
+            resultado_limpio[var] = {
+                "valor": valor,
+                "confianza": min(1.0, max(0.0, float(info.get("confianza", 0.9)))),
+                "frase_detectada": str(info.get("frase_detectada", "")),
+            }
+
+    if not resultado_limpio:
+        ULTIMO_RESULTADO = {}
+        ULTIMO_PROVEEDOR = None
+        return None
+
+    ULTIMO_RESULTADO = resultado_limpio
+    ULTIMO_PROVEEDOR = proveedor
+    return resultado_limpio
 
 
 def obtener_resultado_formateado():

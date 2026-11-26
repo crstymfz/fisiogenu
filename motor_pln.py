@@ -76,16 +76,21 @@ SINONIMOS_CLINICOS = {
             "independiente", "autonomo", "sin ayuda", "camina solo",
             "actividades independientes", "se vale por si mismo",
             "sin asistencia", "no necesita ayuda",
+            "funcionalmente independiente", "independencia funcional",
+            "deambula independiente", "vida independiente",
         ],
         "asistida": [
             "con ayuda", "asistido", "necesita apoyo", "muletas",
             "baston", "andadera", "camina con apoyo",
             "asistencia parcial", "supervision",
+            "deambula con asistencia", "requiere Supervision",
+            "movilizacion asistida", "dependencia parcial",
         ],
         "dependiente": [
             "dependiente", "no puede caminar", "silla de ruedas",
             "necesita asistencia total", "postrado", "encamado",
             "inmovil", "no se moviliza",
+            "dependencia total", "incapaz de deambular",
         ],
     },
     "tolerancia_carga": {

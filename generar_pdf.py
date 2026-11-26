@@ -75,8 +75,8 @@ class EvaluacionPDF(FPDF):
         colores = {
             "aguda": ((180, 40, 40), (255, 230, 230)),
             "subaguda": ((200, 120, 30), (255, 245, 230)),
-            "funcional": ((30, 100, 180), (230, 245, 255)),
-            "alta funcional": ((30, 130, 70), (230, 255, 240)),
+            "cronica": ((120, 80, 160), (240, 230, 255)),
+            "funcional": ((30, 130, 70), (230, 255, 240)),
         }
         color_texto, color_fondo = colores.get(fase, ((80,), (240,)))
         self._celda_color(60, 8, fase.upper(), color_texto, color_fondo)
@@ -133,13 +133,13 @@ class EvaluacionPDF(FPDF):
         self.set_text_color(50)
         recs = ev.get("recomendaciones", []) if isinstance(ev.get("recomendaciones"), list) else ev.get("recomendaciones_lista", [])
         for i, rec in enumerate(recs, 1):
-            self.cell(5, 6, "")
-            self.cell(0, 6, f"{i}. {rec}", new_x="LMARGIN", new_y="NEXT")
+            self.multi_cell(0, 5, f"{i}. {rec}")
+            self.ln(2)
 
         if ev.get("explicacion_ia"):
-            self.ln(4)
+            self.ln(2)
             self.set_font("Arial", "I", 9)
-            self.set_text_color(100)
-            self.multi_cell(0, 5, f"Nota clinica: {ev['explicacion_ia']}")
+            self.set_text_color(80)
+            self.multi_cell(0, 5, f"Nota clínica y precauciones:\n{ev['explicacion_ia']}")
 
         return self

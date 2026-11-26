@@ -1,85 +1,62 @@
-import os
-import re
-import json
-import requests
-
-API_URL = os.environ.get("IA_API_URL", "https://api.groq.com/openai/v1/chat/completions")
-
-_key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".ia_key")
-API_KEY = os.environ.get("IA_API_KEY", "")
-if not API_KEY and os.path.isfile(_key_file):
-    with open(_key_file, "r") as f:
-        API_KEY = f.read().strip()
-
-MODELO = os.environ.get("IA_MODELO", "llama-3.3-70b-versatile")
+import ia_client
 
 SISTEMA_REC = (
-    "Eres un fisioterapeuta especializado en rehabilitacion de rodilla. "
-    "Genera recomendaciones de tratamiento personalizadas basadas en las variables clinicas del paciente. "
-    "Debes devolver SOLO JSON valido, sin markdown, sin texto adicional. "
-    "5 recomendaciones especificas, profesionales y accionables, ordenadas por prioridad clinica. "
-    "Cada una debe ser una frase clara y concreta en espanol.\n\n"
-    '{"recomendaciones": ["Recomendacion 1", ...], '
-    '"explicacion_adicional": "Breve nota clinica sobre el caso"}'
+    "Eres un fisioterapeuta especialista en rehabilitación ortopédica y traumatológica de rodilla. "
+    "Tu objetivo es elaborar un plan de tratamiento y recomendaciones clínicas de ALTO NIVEL, PROFUNDAS, ESPECÍFICAS Y ACCIONABLES, "
+    "adaptadas estrictamente a las variables clínicas del paciente y a su fase de recuperación.\n\n"
+    "Para cada recomendación debes incluir:\n"
+    "1. Categoría o Tipo de intervención (ej. Cinesiterapia, Fortalecimiento, Agentes Físicos, Propiocepción, Reeducación de Marcha, Terapia Manual, etc.).\n"
+    "2. Descripción técnica detallada con dosificación clínica exacta (series, repeticiones, tiempos de mantenimiento, frecuencia diaria/semanal, ángulos de movimiento seguros).\n"
+    "3. Justificación biomecánica y fisiológica (por qué se prescribe en este caso particular y qué objetivo terapéutico cumple).\n\n"
+    "Debes devolver SOLO JSON válido con la siguiente estructura exacta:\n"
+    "{\n"
+    '  "recomendaciones": [\n'
+    '    "Categoría/Nombre: Descripción técnica detallada con dosificación precisa... Justificación: ...",\n'
+    '    ...\n'
+    "  ],\n"
+    '  "analisis_clinico_profundo": "Análisis fisiopatológico detallado del caso, correlacionando dolor, edema, rango, fuerza, carga y estabilidad con la fase diagnóstica.",\n'
+    '  "precauciones_contraindicaciones": "Movimientos contraindicados, límites de angulación articular a evitar y signos de alarma clínicos para suspender el ejercicio."\n'
+    "}"
 )
 
 
-def _extraer_json(texto):
-    texto = texto.strip()
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", texto, re.DOTALL)
-    if match:
-        texto = match.group(1)
-    texto = re.sub(r",\s*}", "}", texto)
-    texto = re.sub(r",\s*]", "]", texto)
-    inicio = texto.find("{")
-    fin = texto.rfind("}")
-    if inicio != -1 and fin != -1 and fin > inicio:
-        texto = texto[inicio:fin+1]
-    return json.loads(texto)
-
-
 def generar_recomendaciones(hechos, fase, nombre_paciente="el paciente"):
-    if not API_KEY:
-        return None, None
-
+    """
+    Genera recomendaciones clínicas profundas y personalizadas usando el cliente de IA híbrido (Gemini / Groq).
+    """
     vars_texto = ", ".join(f"{k}: {v}" for k, v in sorted(hechos.items()) if v)
 
     mensaje = (
         f"Paciente: {nombre_paciente}\n"
         f"Fase detectada: {fase}\n"
-        f"Variables clinicas: {vars_texto}\n\n"
-        "Genera recomendaciones de rehabilitacion especificas para este caso."
+        f"Variables clínicas evaluadas: {vars_texto}\n\n"
+        "Genera un plan de recomendaciones clínicas detallado, con dosificación exacta, justificación biomecánica, "
+        "análisis fisiopatológico profundo y precauciones específicas para este paciente."
     )
 
-    try:
-        resp = requests.post(
-            API_URL,
-            headers={
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": MODELO,
-                "messages": [
-                    {"role": "system", "content": SISTEMA_REC},
-                    {"role": "user", "content": mensaje},
-                ],
-                "temperature": 0.3,
-                "max_tokens": 1024,
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        raw = resp.json()["choices"][0]["message"]["content"]
-        datos = _extraer_json(raw)
+    datos, proveedor = ia_client.consultar_ia_json(
+        system_prompt=SISTEMA_REC,
+        user_prompt=mensaje,
+        orden_preferido=("gemini", "groq")
+    )
 
-        recs = datos.get("recomendaciones", [])
-        extra = datos.get("explicacion_adicional", "")
-
-        if not isinstance(recs, list) or len(recs) == 0:
-            return None, None
-
-        return recs[:7], extra
-
-    except Exception:
+    if not datos or not isinstance(datos, dict):
         return None, None
+
+    recs = datos.get("recomendaciones", [])
+    analisis = datos.get("analisis_clinico_profundo", datos.get("explicacion_adicional", ""))
+    precauciones = datos.get("precauciones_contraindicaciones", "")
+
+    if not isinstance(recs, list) or len(recs) == 0:
+        return None, None
+
+    # Estructuramos la nota clínica con la profundidad y precauciones recibidas
+    nota_completa = ""
+    if analisis:
+        nota_completa += f"Análisis Fisiopatológico: {analisis}\n\n"
+    if precauciones:
+        nota_completa += f"Precauciones y Contraindicaciones: {precauciones}\n\n"
+    if proveedor:
+        nota_completa += f"Plan generado con {proveedor}"
+
+    return recs[:8], nota_completa.strip()
